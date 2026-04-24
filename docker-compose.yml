@@ -1,0 +1,34 @@
+services:
+  plex-alexa-skill:
+    build: ./app
+    container_name: plex-alexa-skill
+    environment:
+      # Your public HTTPS hostname for the Alexa skill endpoint
+      - SKILL_HOSTNAME=plex.YOUR_DOMAIN
+
+      # Plex server internal LAN address
+      - PLEX_HOST=http://YOUR_PLEX_IP:32400
+
+      # Plex token (read from Docker secret file)
+      - PLEX_TOKEN=/run/secrets/PLEX_TOKEN
+
+      # Public HTTPS host Alexa uses to stream audio
+      - PLEX_PUBLIC_HOST=https://plex.YOUR_DOMAIN
+
+      - PORT=5001
+      - TZ=America/Chicago
+
+      # Uncomment during initial testing to skip Alexa request signature verification
+      # - DISABLE_REQUEST_VERIFY=true
+
+    secrets:
+      - PLEX_TOKEN
+
+    ports:
+      - "5001:5001"
+
+    restart: unless-stopped
+
+secrets:
+  PLEX_TOKEN:
+    file: ./secrets/plex_token.txt

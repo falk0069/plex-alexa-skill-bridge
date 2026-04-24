@@ -1,0 +1,192 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "plex",
+      "intents": [
+        {
+          "name": "PlayMusicIntent",
+          "slots": [
+            {
+              "name": "song",
+              "type": "AMAZON.MusicRecording"
+            },
+            {
+              "name": "artist",
+              "type": "AMAZON.MusicGroup"
+            },
+            {
+              "name": "album",
+              "type": "AMAZON.MusicAlbum"
+            },
+            {
+              "name": "playlist",
+              "type": "AMAZON.MusicPlaylist"
+            }
+          ],
+          "samples": [
+            "play the song {song}",
+            "play {song}",
+            "play the track {song}",
+            "play the artist {artist}",
+            "play music by {artist}",
+            "play songs by {artist}",
+            "play {artist}",
+            "play the album {album}",
+            "play album {album}",
+            "play the playlist {playlist}",
+            "play playlist {playlist}",
+            "put on {artist}",
+            "put on the album {album}",
+            "put on {song}",
+            "I want to listen to {artist}",
+            "I want to hear {song}",
+            "play some {artist}"
+          ]
+        },
+        {
+          "name": "ShuffleArtistIntent",
+          "slots": [
+            {
+              "name": "artist",
+              "type": "AMAZON.MusicGroup"
+            }
+          ],
+          "samples": [
+            "shuffle {artist}",
+            "shuffle songs by {artist}",
+            "shuffle music by {artist}",
+            "play {artist} on shuffle",
+            "random {artist}",
+            "play random {artist}"
+          ]
+        },
+        {
+          "name": "AMAZON.PauseIntent"
+        },
+        {
+          "name": "PlayDecadeIntent",
+          "slots": [
+            {
+              "name": "decade",
+              "type": "DECADE_TYPE"
+            }
+          ],
+          "samples": [
+            "play music from the {decade}",
+            "play songs from the {decade}",
+            "shuffle the {decade}",
+            "play the {decade}",
+            "play {decade} music",
+            "play some {decade}",
+            "shuffle music from the {decade}"
+          ]
+        },
+        {
+          "name": "AMAZON.ResumeIntent"
+        },
+        {
+          "name": "AMAZON.StopIntent"
+        },
+        {
+          "name": "AMAZON.NextIntent"
+        },
+        {
+          "name": "AMAZON.CancelIntent"
+        },
+        {
+          "name": "AMAZON.HelpIntent"
+        },
+        {
+          "name": "AMAZON.FallbackIntent"
+        }
+      ],
+      "types": [
+        {
+          "name": "DECADE_TYPE",
+          "values": [
+            {
+              "name": {
+                "value": "1950s",
+                "synonyms": [
+                  "fifties",
+                  "the fifties",
+                  "the 1950s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "1960s",
+                "synonyms": [
+                  "sixties",
+                  "the sixties",
+                  "the 1960s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "1970s",
+                "synonyms": [
+                  "seventies",
+                  "the seventies",
+                  "the 1970s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "1980s",
+                "synonyms": [
+                  "eighties",
+                  "the eighties",
+                  "the 1980s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "1990s",
+                "synonyms": [
+                  "nineties",
+                  "the nineties",
+                  "the 1990s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "2000s",
+                "synonyms": [
+                  "two thousands",
+                  "the two thousands",
+                  "the 2000s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "2010s",
+                "synonyms": [
+                  "twenty tens",
+                  "the twenty tens",
+                  "the 2010s"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "2020s",
+                "synonyms": [
+                  "twenty twenties",
+                  "the twenty twenties",
+                  "the 2020s"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
