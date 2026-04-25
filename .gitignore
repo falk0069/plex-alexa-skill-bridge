@@ -1,6 +1,5 @@
 # Secrets — never commit these
 secrets/
-*.txt
 .env
 
 # Python
