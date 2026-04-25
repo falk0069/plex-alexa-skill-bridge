@@ -10,7 +10,10 @@ from urllib.parse import urljoin, quote
 logger = logging.getLogger(__name__)
 
 PLEX_HOST = os.environ.get('PLEX_HOST', 'http://YOUR_PLEX_IP:32400')
-PLEX_PUBLIC_HOST = os.environ.get('PLEX_PUBLIC_HOST', '')  # e.g. https://plex.YOUR_DOMAIN
+# Accept either bare FQDN or https://FQDN — normalize to bare FQDN at load time.
+# https:// is always prepended when building public URLs.
+_raw_public_host = os.environ.get('PLEX_PUBLIC_HOST', '')
+PLEX_PUBLIC_HOST = _raw_public_host.removeprefix('https://').removeprefix('http://').rstrip('/')
 
 def _read_secret(env_var, default=''):
     """Read env var value — if it looks like a file path, read the file contents instead."""
@@ -178,8 +181,7 @@ def get_stream_url(track, public=True):
         token_param = f"?X-Plex-Token={PLEX_TOKEN}"
 
         if public and PLEX_PUBLIC_HOST:
-            base = PLEX_PUBLIC_HOST.rstrip('/')
-            return f"{base}{key}{token_param}"
+            return f"https://{PLEX_PUBLIC_HOST}{key}{token_param}"
         else:
             base = PLEX_HOST.rstrip('/')
             return f"{base}{key}{token_param}"
@@ -195,8 +197,7 @@ def get_thumb_url(track, public=True):
         return None
     token_param = f"?X-Plex-Token={PLEX_TOKEN}"
     if public and PLEX_PUBLIC_HOST:
-        base = PLEX_PUBLIC_HOST.rstrip('/')
-        return f"{base}{thumb}{token_param}"
+        return f"https://{PLEX_PUBLIC_HOST}{thumb}{token_param}"
     base = PLEX_HOST.rstrip('/')
     return f"{base}{thumb}{token_param}"
 

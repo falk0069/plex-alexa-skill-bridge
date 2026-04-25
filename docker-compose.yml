@@ -13,8 +13,8 @@ services:
       # Plex token (read from Docker secret file)
       - PLEX_TOKEN=/run/secrets/PLEX_TOKEN
 
-      # Public HTTPS host Alexa uses to stream audio
-      - PLEX_PUBLIC_HOST=https://plex.YOUR_DOMAIN
+      # Public hostname Alexa uses to stream audio (FQDN only, no https://)
+      - PLEX_PUBLIC_HOST=plex.YOUR_DOMAIN
 
       - PORT=5001
       - TZ=America/Chicago

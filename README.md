@@ -41,6 +41,80 @@ Apache reverse proxy → Plex streaming server (port 32400)
 - An Amazon Developer account (free) to create the Alexa skill
 - A wildcard or multi-domain SSL certificate for your domain
 
+## Getting a domain, dynamic DNS, and SSL certificate
+
+Alexa requires a publicly reachable HTTPS endpoint. If you're self-hosting at home on a residential ISP (where your public IP changes periodically), here's a low-cost, fully automated path to get there.
+
+### 1. Register a domain (~$11/year)
+
+[Cloudflare Registrar](https://www.cloudflare.com/products/registrar/) sells domains at cost with no markup — a `.com` typically runs around $10–11/year. Registration automatically includes Cloudflare's DNS management, which is what makes the rest of this easy.
+
+- Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Domain Registration → Register a domain**
+- Once registered, your domain is immediately on Cloudflare's nameservers
+
+### 2. Keep your DNS record current when your IP changes
+
+Residential ISPs periodically reassign your public IP. A DDNS (Dynamic DNS) client runs on your server and updates your Cloudflare DNS record automatically whenever the IP changes.
+
+**ddclient** is the most widely used option on Linux:
+
+- [github.com/ddclient/ddclient](https://github.com/ddclient/ddclient) — supports Cloudflare natively
+- Create a Cloudflare API token with `Zone → DNS → Edit` permission, then add a config block like:
+
+```
+protocol=cloudflare
+zone=YOUR_DOMAIN
+login=token
+password=YOUR_CLOUDFLARE_API_TOKEN
+plex.YOUR_DOMAIN
+```
+
+- Run it as a systemd service or cron job; it will check your IP every few minutes and update the record only when it changes
+
+**Other options:**
+
+- [inadyn](https://github.com/troglobit/inadyn) — another solid DDNS client with Cloudflare support
+- Many home routers (Asus, Synology, UniFi) have built-in DDNS clients that support Cloudflare directly — no separate software needed
+
+### 3. Get a free SSL certificate via Let's Encrypt
+
+[Let's Encrypt](https://letsencrypt.org/) issues free, trusted SSL certificates that auto-renew every 90 days via the ACME protocol. Because the skill endpoint and audio streams both require HTTPS, this is the standard approach for self-hosted setups.
+
+**Recommended: acme.sh with Cloudflare DNS challenge**
+
+[acme.sh](https://github.com/acmesh-official/acme.sh) is a lightweight shell script that handles issuance and renewal without any dependencies. Using the Cloudflare DNS-01 challenge means port 80 never needs to be open — renewal happens entirely through Cloudflare's API, which is ideal for home servers behind firewalls.
+
+```bash
+# Install acme.sh
+curl https://get.acme.sh | sh
+
+# Issue a certificate using Cloudflare DNS validation
+export CF_Token="YOUR_CLOUDFLARE_API_TOKEN"
+~/.acme.sh/acme.sh --issue --dns dns_cf -d plex.YOUR_DOMAIN
+
+# Install into your web server cert path and reload on renewal
+~/.acme.sh/acme.sh --install-cert -d plex.YOUR_DOMAIN \
+  --cert-file      /etc/letsencrypt/live/YOUR_DOMAIN/cert.pem \
+  --key-file       /etc/letsencrypt/live/YOUR_DOMAIN/privkey.pem \
+  --fullchain-file /etc/letsencrypt/live/YOUR_DOMAIN/fullchain.pem \
+  --reloadcmd      "systemctl reload nginx"  # or httpd
+```
+
+acme.sh installs a cron job automatically; certificates renew silently in the background before they expire.
+
+**Alternative: Certbot**
+
+[Certbot](https://certbot.eff.org/) is the EFF's official ACME client and has a Cloudflare DNS plugin. It's a good choice if you prefer a more guided setup or are already using Certbot elsewhere.
+
+```bash
+pip install certbot certbot-dns-cloudflare
+certbot certonly --dns-cloudflare \
+  --dns-cloudflare-credentials ~/.secrets/cloudflare.ini \
+  -d plex.YOUR_DOMAIN
+```
+
+Both tools place certificates in paths that match the `apache-vhost.conf` and `nginx-vhost.conf` configs included in this repo.
+
 ## Directory Structure
 
 ```
@@ -56,6 +130,7 @@ plex-alexa-skill-bridge/
 │           ├── handler.py      # Alexa skill request handlers
 │           └── queue.py        # In-memory per-device queue manager
 ├── apache-vhost.conf           # Apache reverse proxy config
+├── nginx-vhost.conf            # nginx reverse proxy config
 ├── docker-compose.yml          # Docker Compose configuration
 ├── fix-docker-iptables.sh      # Fix for Docker iptables issue
 ├── interaction_model.json      # Alexa skill interaction model
@@ -74,14 +149,14 @@ plex-alexa-skill-bridge/
 4. Look for `X-Plex-Token` in the URL or request headers
 5. Copy the token value
 
-### 2. Clone and configure
+### 2. Download and configure
 
 ```bash
-git clone https://github.com/falk0069/plex-alexa-skill-bridge.git
-cd plex-alexa-skill-bridge
+# Download the compose file
+curl -O https://raw.githubusercontent.com/falk0069/plex-alexa-skill-bridge/main/docker-compose.yml
 
-# Create your secrets file
-cp secrets/plex_token.txt.example secrets/plex_token.txt
+# Create the secrets directory and token file
+mkdir -p secrets
 echo "YOUR_ACTUAL_PLEX_TOKEN" > secrets/plex_token.txt
 ```
 
@@ -89,21 +164,35 @@ Edit `docker-compose.yml` and replace all `YOUR_*` placeholders:
 
 ```yaml
 environment:
-  - SKILL_HOSTNAME=plex.YOUR_DOMAIN      # e.g. plex.example.com
-  - PLEX_HOST=http://YOUR_PLEX_IP:32400  # e.g. http://192.168.1.100:32400
-  - PLEX_PUBLIC_HOST=https://plex.YOUR_DOMAIN
+  - SKILL_HOSTNAME=plex.YOUR_DOMAIN      # e.g. plex.example.com (Alexa only allow https port 443)
+  - PLEX_HOST=http://YOUR_PLEX_IP:32400  # e.g. your local URL where Plex is at: http://192.168.1.100:32400
+  - PLEX_PUBLIC_HOST=plex.YOUR_DOMAIN    # e.g. plex.example.com (suggest this be the same as the SKILL_HOSTNAME)
 ```
 
-### 3. Set up Apache reverse proxy
+### 3. Set up your reverse proxy
 
-Copy `apache-vhost.conf` into your Apache config, replacing `YOUR_DOMAIN` and `YOUR_PLEX_IP` with your actual values:
+Download the config for your web server, replace `YOUR_DOMAIN` and `YOUR_PLEX_IP` with your actual values, then install it.
 
+**Apache:**
 ```bash
-# Copy to your Apache conf.d or add to your existing vhosts file
+curl -O https://raw.githubusercontent.com/falk0069/plex-alexa-skill-bridge/main/apache-vhost.conf
+
+# Edit the file, then install
 sudo cp apache-vhost.conf /etc/httpd/conf.d/plex-alexa.conf
 
 # Test and reload
 sudo apachectl configtest && sudo systemctl reload httpd
+```
+
+**nginx:**
+```bash
+curl -O https://raw.githubusercontent.com/falk0069/plex-alexa-skill-bridge/main/nginx-vhost.conf
+
+# Edit the file, then install
+sudo cp nginx-vhost.conf /etc/nginx/conf.d/plex-alexa.conf
+
+# Test and reload
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
 ### 4. Add DNS record
@@ -113,7 +202,8 @@ Add a DNS A record for `plex.YOUR_DOMAIN` pointing to your server's public IP.
 ### 5. Start the container
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 
 # Verify it's running and can reach Plex
 curl https://plex.YOUR_DOMAIN/status
@@ -130,7 +220,7 @@ You should see "Connected" for the Plex server status.
    - Model: `Custom`
    - Hosting: `Provision your own`
 3. In **Build → Interfaces**, enable **Audio Player**
-4. In **Build → Interaction Model → JSON Editor**, paste the contents of `interaction_model.json`
+4. In **Build → Interaction Model → JSON Editor**, paste the contents of [`interaction_model.json`](https://raw.githubusercontent.com/falk0069/plex-alexa-skill-bridge/main/interaction_model.json)
 5. Click **Save Model** then **Build Model**
 6. In **Build → Endpoint**:
    - Select **HTTPS**
@@ -173,10 +263,13 @@ Watch the logs: `docker logs plex-alexa-skill -f`
 - Verify the endpoint URL is saved correctly in the skill
 - Check Apache logs for 403/502 errors
 
-### Container loses internet access after `docker compose up --build`
-This is a known Docker bug on some Linux systems where the iptables FORWARD rules get wiped during a compose rebuild. Install the fix script:
+### Container loses internet access after `docker compose up`
+This is a known Docker bug on some Linux systems where the iptables FORWARD rules get wiped when a container is recreated. The fix script is included in the repo:
 
 ```bash
+# Download the fix script
+curl -O https://raw.githubusercontent.com/falk0069/plex-alexa-skill-bridge/main/fix-docker-iptables.sh
+
 sudo cp fix-docker-iptables.sh /usr/local/bin/fix-docker-iptables
 sudo chmod +x /usr/local/bin/fix-docker-iptables
 
@@ -184,7 +277,7 @@ sudo chmod +x /usr/local/bin/fix-docker-iptables
 echo "*/2 * * * * root /usr/local/bin/fix-docker-iptables >> /var/log/fix-docker-iptables.log 2>&1" \
   | sudo tee /etc/cron.d/fix-docker-forward
 
-# Run manually after any docker compose up --build
+# Run manually after any docker compose up
 sudo fix-docker-iptables
 ```
 
@@ -210,7 +303,7 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 | `SKILL_HOSTNAME` | Yes | Public hostname for the skill endpoint (e.g. `plex.example.com`) |
 | `PLEX_HOST` | Yes | Internal Plex server URL (e.g. `http://192.168.1.100:32400`) |
 | `PLEX_TOKEN` | Yes | Plex authentication token (or path to Docker secret file) |
-| `PLEX_PUBLIC_HOST` | Yes | Public HTTPS URL for Plex streaming (e.g. `https://plex.example.com`) |
+| `PLEX_PUBLIC_HOST` | Yes | Public hostname for Plex streaming — FQDN only, no scheme (e.g. `plex.example.com`) |
 | `PORT` | No | Port for Flask to listen on (default: `5001`) |
 | `TZ` | No | Container timezone (default: `UTC`) |
 | `DISABLE_REQUEST_VERIFY` | No | Set to `true` to skip Alexa signature verification (testing only) |
@@ -221,6 +314,36 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 - Queue state is in-memory — restarting the container clears all queues
 - Decade search caps at 30 albums to avoid response timeouts
 - Multi-device playback works but requires a single gunicorn worker (`--workers 1`) for shared queue state
+
+## Building from source
+
+If you want to modify the skill or experiment with the code:
+
+```bash
+git clone https://github.com/falk0069/plex-alexa-skill-bridge.git
+cd plex-alexa-skill-bridge
+
+# Create your secrets file
+cp secrets/plex_token.txt.example secrets/plex_token.txt
+echo "YOUR_ACTUAL_PLEX_TOKEN" > secrets/plex_token.txt
+```
+
+Edit `docker-compose.yml`, comment out the `image:` line, and uncomment `build: ./app`:
+
+```yaml
+services:
+  plex-alexa-skill:
+    # image: ghcr.io/falk0069/plex-alexa-skill-bridge:latest
+    build: ./app
+```
+
+Then build and run:
+
+```bash
+docker compose up -d --build
+```
+
+After any rebuild, run `sudo fix-docker-iptables` if your container loses internet access (see Troubleshooting).
 
 ## Contributing
 
