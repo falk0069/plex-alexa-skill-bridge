@@ -1,6 +1,7 @@
 services:
   plex-alexa-skill:
-    build: ./app
+    image: ghcr.io/falk0069/plex-alexa-skill-bridge:latest
+    # build: ./app #if not using the image above and self compiling
     container_name: plex-alexa-skill
     environment:
       # Your public HTTPS hostname for the Alexa skill endpoint
