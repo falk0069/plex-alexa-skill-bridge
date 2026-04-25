@@ -19,6 +19,9 @@ services:
       - PORT=5001
       - TZ=America/Chicago
 
+      # Uncomment to enable the /status diagnostic page (disable when not needed)
+      # - ENABLE_STATUS_PAGE=true
+
       # Uncomment during initial testing to skip Alexa request signature verification
       # - DISABLE_REQUEST_VERIFY=true
 

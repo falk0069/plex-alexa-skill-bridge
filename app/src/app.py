@@ -25,6 +25,7 @@ app = Flask(__name__)
 SKILL_HOSTNAME = os.environ.get('SKILL_HOSTNAME', '')
 PORT = int(os.environ.get('PORT', 5001))
 DISABLE_VERIFY = os.environ.get('DISABLE_REQUEST_VERIFY', '').lower() in ('1', 'true', 'yes')
+ENABLE_STATUS = os.environ.get('ENABLE_STATUS_PAGE', '').lower() in ('1', 'true', 'yes')
 
 # Build verifiers list based on DISABLE_REQUEST_VERIFY flag
 if DISABLE_VERIFY:
@@ -53,6 +54,9 @@ def skill_endpoint():
 
 @app.route('/status')
 def status():
+    if not ENABLE_STATUS:
+        return Response('Status page is disabled. Set ENABLE_STATUS_PAGE=true in docker-compose.yml and restart to enable it.', status=403, content_type='text/plain')
+
     plex_ok = False
     plex_info = {}
     try:

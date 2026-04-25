@@ -197,7 +197,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 4. Add DNS record
 
-Add a DNS A record for `plex.YOUR_DOMAIN` pointing to your server's public IP.
+Add a DNS CNAME or A record for `plex.YOUR_DOMAIN` pointing to your server's public IP.
 
 ### 5. Start the container
 
@@ -306,6 +306,7 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 | `PLEX_PUBLIC_HOSTNAME` | Yes | Public hostname for Plex streaming — FQDN only, no scheme (e.g. `plex.example.com`) |
 | `PORT` | No | Port for Flask to listen on (default: `5001`) |
 | `TZ` | No | Container timezone (default: `UTC`) |
+| `ENABLE_STATUS_PAGE` | No | Set to `true` to enable the `/status` diagnostic page (disabled by default) |
 | `DISABLE_REQUEST_VERIFY` | No | Set to `true` to skip Alexa signature verification (testing only) |
 
 ## Known Limitations
