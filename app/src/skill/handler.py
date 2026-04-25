@@ -15,8 +15,9 @@ from ask_sdk_model.interfaces.audioplayer import (
 
 from plex.client import resolve_play_request
 from skill.queue import (
-    set_queue, get_current_track, get_next_track,
-    advance_queue, clear_queue, get_queue_length, get_queue_index
+    set_queue, get_current_track,
+    advance_queue, clear_queue, get_queue_length, get_queue_index,
+    get_track_at_index, set_offset, get_offset,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,13 +31,15 @@ def _user_id(handler_input):
         handler_input.request_envelope.context.system.user.user_id
 
 
-def _build_play_directive(track, behavior=PlayBehavior.REPLACE_ALL, previous_token=None):
+def _build_play_directive(track, behavior=PlayBehavior.REPLACE_ALL, previous_token=None, index=0, offset_ms=0):
     """Build an Alexa AudioPlayer Play directive from a track info dict."""
     from ask_sdk_model.interfaces.display.image import Image as DisplayImage
     from ask_sdk_model.interfaces.display.image_instance import ImageInstance
 
     stream_url = track.get('stream_url')
-    token = f"{TOKEN_PREFIX}{track.get('rating_key', 'unknown')}"
+    # Encode index in token so NearlyFinished can find the right next track
+    # even if in-memory queue state drifts.
+    token = f"{TOKEN_PREFIX}{index}-{track.get('rating_key', 'unknown')}"
 
     logger.info(f"Building play directive: artist={track.get('artist')!r} title={track.get('title')!r} url={stream_url!r}")
 
@@ -77,7 +80,7 @@ def _build_play_directive(track, behavior=PlayBehavior.REPLACE_ALL, previous_tok
             stream=Stream(
                 token=token,
                 url=stream_url,
-                offset_in_milliseconds=0,
+                offset_in_milliseconds=offset_ms,
                 expected_previous_token=previous_token,
             ),
             metadata=metadata,
@@ -263,13 +266,21 @@ class PlaybackNearlyFinishedHandler(AbstractRequestHandler):
     def handle(self, handler_input):
         user_id = _user_id(handler_input)
         current_token = handler_input.request_envelope.request.token
-        next_track = get_next_track(user_id)
+
+        # Decode the playing index from the token (format: plex-track-{index}-{key})
+        try:
+            next_index = int(current_token[len(TOKEN_PREFIX):].split('-')[0]) + 1
+        except (ValueError, IndexError):
+            next_index = get_queue_index(user_id) + 1
+
+        next_track = get_track_at_index(user_id, next_index)
 
         if next_track and next_track.get('stream_url'):
             directive = _build_play_directive(
                 next_track,
                 behavior=PlayBehavior.ENQUEUE,
                 previous_token=current_token,
+                index=next_index,
             )
             return (
                 handler_input.response_builder
@@ -306,6 +317,9 @@ class PlaybackStoppedHandler(AbstractRequestHandler):
         return is_request_type("AudioPlayer.PlaybackStopped")(handler_input)
 
     def handle(self, handler_input):
+        user_id = _user_id(handler_input)
+        offset_ms = getattr(handler_input.request_envelope.request, 'offset_in_milliseconds', 0) or 0
+        set_offset(user_id, offset_ms)
         return handler_input.response_builder.response
 
 
@@ -348,7 +362,9 @@ class ResumeIntentHandler(AbstractRequestHandler):
                 .speak("There's nothing to resume. Ask me to play something first.")
                 .response
             )
-        directive = _build_play_directive(track, PlayBehavior.REPLACE_ALL)
+        index = get_queue_index(user_id)
+        offset_ms = get_offset(user_id)
+        directive = _build_play_directive(track, PlayBehavior.REPLACE_ALL, index=index, offset_ms=offset_ms)
         return (
             handler_input.response_builder
             .add_directive(directive)
@@ -370,7 +386,8 @@ class NextIntentHandler(AbstractRequestHandler):
                 .add_directive(StopDirective())
                 .response
             )
-        directive = _build_play_directive(track, PlayBehavior.REPLACE_ALL)
+        index = get_queue_index(user_id)
+        directive = _build_play_directive(track, PlayBehavior.REPLACE_ALL, index=index)
         return (
             handler_input.response_builder
             .add_directive(directive)

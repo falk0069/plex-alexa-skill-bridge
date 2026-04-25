@@ -18,6 +18,7 @@ def set_queue(user_id, tracks, index=0):
         _queues[user_id] = {
             'tracks': tracks,
             'index': index,
+            'offset_ms': 0,
         }
     logger.info(f"Queue set for {user_id}: {len(tracks)} tracks, starting at {index}")
 
@@ -55,6 +56,7 @@ def advance_queue(user_id):
         if not q:
             return None
         q['index'] += 1
+        q['offset_ms'] = 0
         tracks = q['tracks']
         index = q['index']
         if index >= len(tracks):
@@ -85,3 +87,30 @@ def get_queue_index(user_id):
         if not q:
             return 0
         return q['index']
+
+
+def get_track_at_index(user_id, index):
+    """Return the track at an explicit index, or None if out of range."""
+    with _lock:
+        q = _queues.get(user_id)
+        if not q:
+            return None
+        tracks = q['tracks']
+        if index < 0 or index >= len(tracks):
+            return None
+        return tracks[index]
+
+
+def set_offset(user_id, offset_ms):
+    """Save the playback position for the current track."""
+    with _lock:
+        q = _queues.get(user_id)
+        if q:
+            q['offset_ms'] = offset_ms
+
+
+def get_offset(user_id):
+    """Return the saved playback position, or 0."""
+    with _lock:
+        q = _queues.get(user_id)
+        return q.get('offset_ms', 0) if q else 0

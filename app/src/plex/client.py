@@ -48,16 +48,6 @@ def _get(path, **kwargs):
         return None
 
 
-def get_music_library_key():
-    """Find the first music library section key."""
-    data = _get('/library/sections')
-    if not data:
-        return None
-    for section in data.get('MediaContainer', {}).get('Directory', []):
-        if section.get('type') == 'artist':
-            return section.get('key')
-    return None
-
 
 def search_tracks(query):
     """Search for tracks matching the query. Returns list of track dicts."""
