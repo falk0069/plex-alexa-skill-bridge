@@ -96,11 +96,14 @@ def search_playlists(query):
     """Search for playlists matching the query. Returns list of playlist dicts."""
     data = _get('/playlists', playlistType='audio')
     if not data:
+        logger.warning("search_playlists: no data returned from /playlists")
         return []
     playlists = data.get('MediaContainer', {}).get('Metadata', []) or []
+    all_titles = [p.get('title', '') for p in playlists]
+    logger.info(f"search_playlists: query={query!r} total_playlists={len(playlists)} titles={all_titles}")
     query_lower = query.lower()
-    # Filter by name similarity
     matches = [p for p in playlists if query_lower in p.get('title', '').lower()]
+    logger.info(f"search_playlists: matched {len(matches)} playlist(s): {[p.get('title') for p in matches]}")
     return matches
 
 
