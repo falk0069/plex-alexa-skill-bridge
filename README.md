@@ -132,7 +132,6 @@ plex-alexa-skill-bridge/
 ├── apache-vhost.conf           # Apache reverse proxy config
 ├── nginx-vhost.conf            # nginx reverse proxy config
 ├── docker-compose.yml          # Docker Compose configuration
-├── fix-docker-iptables.sh      # Fix for Docker iptables issue
 ├── interaction_model.json      # Alexa skill interaction model
 ├── secrets/
 │   └── plex_token.txt.example  # Copy to plex_token.txt and add your token
@@ -264,22 +263,12 @@ Watch the logs: `docker logs plex-alexa-skill -f`
 - Check Apache logs for 403/502 errors
 
 ### Container loses internet access after `docker compose up`
-This is a known Docker bug on some Linux systems where the iptables FORWARD rules get wiped when a container is recreated. The fix script is included in the repo:
+If the container can't reach the internet (visible on the `/status` page), the most common causes are host firewall rules or Docker networking misconfiguration. Things to check:
 
-```bash
-# Download the fix script
-curl -O https://raw.githubusercontent.com/falk0069/plex-alexa-skill-bridge/main/fix-docker-iptables.sh
-
-sudo cp fix-docker-iptables.sh /usr/local/bin/fix-docker-iptables
-sudo chmod +x /usr/local/bin/fix-docker-iptables
-
-# Add cron job to auto-heal every 2 minutes
-echo "*/2 * * * * root /usr/local/bin/fix-docker-iptables >> /var/log/fix-docker-iptables.log 2>&1" \
-  | sudo tee /etc/cron.d/fix-docker-forward
-
-# Run manually after any docker compose up
-sudo fix-docker-iptables
-```
+- **Host firewall / iptables** — verify your firewall isn't blocking forwarded traffic from Docker's bridge network. Check `sudo iptables -L FORWARD -n` and make sure there's an `ACCEPT` rule for the `docker0` interface or the container subnet.
+- **Docker bridge network** — run `docker network ls` and `docker network inspect bridge` to confirm the container has an IP and gateway assigned correctly.
+- **Docker daemon restart** — sometimes Docker's internal routing gets into a bad state after a host reboot or network change. `sudo systemctl restart docker` followed by `docker compose up -d` often resolves it.
+- **DNS inside the container** — if the container resolves hostnames but can't route packets, check `/etc/docker/daemon.json` for a custom `dns` entry and make sure it's reachable from the host.
 
 ### Alexa request verification fails / worker timeout
 The skill verifier needs to fetch Amazon's certificate from the internet. If your container can't reach the internet, add `DISABLE_REQUEST_VERIFY=true` to docker-compose temporarily while debugging network issues.
@@ -344,7 +333,7 @@ Then build and run:
 docker compose up -d --build
 ```
 
-After any rebuild, run `sudo fix-docker-iptables` if your container loses internet access (see Troubleshooting).
+If your container loses internet access after a rebuild, see the [Docker networking troubleshooting](#container-loses-internet-access-after-docker-compose-up) section.
 
 ## Contributing
 

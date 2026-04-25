@@ -61,7 +61,11 @@ def search_tracks(query):
     mc = data.get('MediaContainer', {})
     # Plex returns SearchResult[].Metadata, not Metadata[] directly
     search_results = mc.get('SearchResult', []) or []
-    results = [sr['Metadata'] for sr in search_results if 'Metadata' in sr]
+    all_results = [sr['Metadata'] for sr in search_results if 'Metadata' in sr]
+    # Plex occasionally returns albums in a track search — exclude them
+    results = [r for r in all_results if r.get('type') == 'track']
+    if len(results) < len(all_results):
+        logger.info(f"search_tracks: filtered {len(all_results) - len(results)} non-track result(s)")
     logger.info(f"search_tracks: query={query!r} results={len(results)} first={results[0].get('title') if results else None}")
     return results
 
@@ -94,16 +98,26 @@ def search_albums(query):
 
 def search_playlists(query):
     """Search for playlists matching the query. Returns list of playlist dicts."""
-    data = _get('/playlists', playlistType='audio')
-    if not data:
-        logger.warning("search_playlists: no data returned from /playlists")
-        return []
-    playlists = data.get('MediaContainer', {}).get('Metadata', []) or []
-    all_titles = [p.get('title', '') for p in playlists]
-    logger.info(f"search_playlists: query={query!r} total_playlists={len(playlists)} titles={all_titles}")
+    seen = {}
+
+    # Owned playlists
+    data = _get('/playlists/all')
+    if data:
+        for p in data.get('MediaContainer', {}).get('Metadata', []) or []:
+            seen[p['ratingKey']] = p
+
+    # Shared playlists (managed users see these at a different endpoint)
+    shared = _get('/library/shared/all', type=15)
+    if shared:
+        for p in shared.get('MediaContainer', {}).get('Metadata', []) or []:
+            seen[p['ratingKey']] = p
+
+    all_playlists = [p for p in seen.values() if p.get('playlistType') == 'audio']
+    logger.info(f"search_playlists: owned+shared audio playlists={len(all_playlists)} titles={[p.get('title') for p in all_playlists]}")
+
     query_lower = query.lower()
-    matches = [p for p in playlists if query_lower in p.get('title', '').lower()]
-    logger.info(f"search_playlists: matched {len(matches)} playlist(s): {[p.get('title') for p in matches]}")
+    matches = [p for p in all_playlists if query_lower in p.get('title', '').lower()]
+    logger.info(f"search_playlists: matched {len(matches)}: {[p.get('title') for p in matches]}")
     return matches
 
 
@@ -322,9 +336,8 @@ def resolve_play_request(query_type, query):
         results = search_tracks(query)
         if not results:
             return [], f"I couldn't find a song called {query}"
-        # Pick best match (first result = closest match from Plex)
-        track = results[0]
-        return [track_to_info(track)], f"Playing {track.get('title')} by {track.get('grandparentTitle', 'Unknown')}"
+        track_info = track_to_info(results[0])
+        return [track_info], f"Playing {track_info['title']} by {track_info['artist']}"
 
     elif query_type == 'artist':
         results = search_artists(query)

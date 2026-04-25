@@ -7,6 +7,7 @@ import sys
 import logging
 import json
 
+import requests as _requests
 from flask import Flask, request, jsonify, Response
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -43,13 +44,44 @@ skill_adapter = SkillAdapter(
     app=app,
 )
 
+# URL used to verify outbound internet access (Amazon's cert endpoint)
+_INTERNET_CHECK_URL = 'https://api.amazon.com'
+_INTERNET_CHECK_TIMEOUT = 5
+
+
+def _check_internet():
+    """Return (reachable: bool, detail: str) with a hard 5-second timeout."""
+    try:
+        resp = _requests.get(_INTERNET_CHECK_URL, timeout=_INTERNET_CHECK_TIMEOUT)
+        return True, f"HTTP {resp.status_code}"
+    except _requests.exceptions.Timeout:
+        return False, f"Timed out after {_INTERNET_CHECK_TIMEOUT}s"
+    except Exception as e:
+        return False, str(e)
+
 
 @app.route('/skill', methods=['POST'])
 def skill_endpoint():
     """Main Alexa skill endpoint."""
-    response = skill_adapter.dispatch_request()
-    logger.info(f"Response to Alexa: {response.get_data(as_text=True)[:500]}")
-    return response
+    try:
+        response = skill_adapter.dispatch_request()
+        logger.info(f"Response to Alexa: {response.get_data(as_text=True)[:500]}")
+        return response
+    except Exception as e:
+        logger.error(f"Skill dispatch failed: {e}", exc_info=True)
+        # Return a valid Alexa response so the Echo speaks an error rather than
+        # showing a generic "there was a problem with the skill" message.
+        return jsonify({
+            "version": "1.0",
+            "sessionAttributes": {},
+            "response": {
+                "outputSpeech": {
+                    "type": "SSML",
+                    "ssml": "<speak>The Plex skill is temporarily unavailable. Please try again in a moment.</speak>",
+                },
+                "shouldEndSession": True,
+            },
+        }), 200
 
 
 @app.route('/status')
@@ -71,12 +103,16 @@ def status():
     except Exception as e:
         plex_info = {'error': str(e)}
 
+    internet_ok, internet_detail = _check_internet()
+
     status_data = {
         'skill_hostname': SKILL_HOSTNAME,
         'plex_host': PLEX_URL,
         'plex_public_host': PLEX_PUBLIC_HOSTNAME,
         'plex_connected': plex_ok,
         'plex_info': plex_info,
+        'internet_reachable': internet_ok,
+        'internet_detail': internet_detail,
         'verify_enabled': not DISABLE_VERIFY,
     }
 
@@ -106,6 +142,13 @@ def status():
         <label>Plex server</label>
         <p class="{ok_cls if plex_ok else fail_cls}">
             {"Connected" if plex_ok else "Unreachable"} - {PLEX_URL}
+        </p>
+    </div>
+    <div class="section">
+        <label>Internet access</label>
+        <p class="{ok_cls if internet_ok else fail_cls}">
+            {"Reachable" if internet_ok else "Unreachable"} - {internet_detail}
+            {' <em>(request verification will fail — check host firewall and Docker networking)</em>' if not internet_ok and not DISABLE_VERIFY else ''}
         </p>
     </div>
     <div class="section">
