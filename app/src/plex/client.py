@@ -9,11 +9,11 @@ from urllib.parse import urljoin, quote
 
 logger = logging.getLogger(__name__)
 
-PLEX_HOST = os.environ.get('PLEX_HOST', 'http://YOUR_PLEX_IP:32400')
+PLEX_URL = os.environ.get('PLEX_URL', 'http://YOUR_PLEX_IP:32400')
 # Accept either bare FQDN or https://FQDN — normalize to bare FQDN at load time.
 # https:// is always prepended when building public URLs.
-_raw_public_host = os.environ.get('PLEX_PUBLIC_HOST', '')
-PLEX_PUBLIC_HOST = _raw_public_host.removeprefix('https://').removeprefix('http://').rstrip('/')
+_raw_public_hostname = os.environ.get('PLEX_PUBLIC_HOSTNAMENAME', '')
+PLEX_PUBLIC_HOSTNAMENAME = _raw_public_hostname.removeprefix('https://').removeprefix('http://').rstrip('/')
 
 def _read_secret(env_var, default=''):
     """Read env var value — if it looks like a file path, read the file contents instead."""
@@ -41,7 +41,7 @@ def _params(**kwargs):
 
 def _get(path, **kwargs):
     """Make a GET request to the Plex server."""
-    url = PLEX_HOST.rstrip('/') + path
+    url = PLEX_URL.rstrip('/') + path
     try:
         resp = SESSION.get(url, params=_params(**kwargs), timeout=10)
         resp.raise_for_status()
@@ -155,7 +155,7 @@ def get_playlist_tracks(playlist_rating_key):
 def get_stream_url(track, public=True):
     """
     Build a stream URL for a track.
-    If public=True, use PLEX_PUBLIC_HOST for Alexa-accessible HTTPS URL.
+    If public=True, use PLEX_PUBLIC_HOSTNAME for Alexa-accessible HTTPS URL.
     """
     try:
         media_list = track.get('Media') or []
@@ -180,10 +180,10 @@ def get_stream_url(track, public=True):
 
         token_param = f"?X-Plex-Token={PLEX_TOKEN}"
 
-        if public and PLEX_PUBLIC_HOST:
-            return f"https://{PLEX_PUBLIC_HOST}{key}{token_param}"
+        if public and PLEX_PUBLIC_HOSTNAME:
+            return f"https://{PLEX_PUBLIC_HOSTNAME}{key}{token_param}"
         else:
-            base = PLEX_HOST.rstrip('/')
+            base = PLEX_URL.rstrip('/')
             return f"{base}{key}{token_param}"
     except Exception as e:
         logger.error(f"get_stream_url error for {track.get('title')!r}: {e}", exc_info=True)
@@ -196,9 +196,9 @@ def get_thumb_url(track, public=True):
     if not thumb:
         return None
     token_param = f"?X-Plex-Token={PLEX_TOKEN}"
-    if public and PLEX_PUBLIC_HOST:
-        return f"https://{PLEX_PUBLIC_HOST}{thumb}{token_param}"
-    base = PLEX_HOST.rstrip('/')
+    if public and PLEX_PUBLIC_HOSTNAME:
+        return f"https://{PLEX_PUBLIC_HOSTNAME}{thumb}{token_param}"
+    base = PLEX_URL.rstrip('/')
     return f"{base}{thumb}{token_param}"
 
 

@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify, Response
 sys.path.insert(0, os.path.dirname(__file__))
 
 from skill.handler import sb
-from plex.client import _get, PLEX_HOST, PLEX_TOKEN, PLEX_PUBLIC_HOST
+from plex.client import _get, PLEX_URL, PLEX_TOKEN, PLEX_PUBLIC_HOSTNAME
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,8 +69,8 @@ def status():
 
     status_data = {
         'skill_hostname': SKILL_HOSTNAME,
-        'plex_host': PLEX_HOST,
-        'plex_public_host': PLEX_PUBLIC_HOST,
+        'plex_host': PLEX_URL,
+        'plex_public_host': PLEX_PUBLIC_HOSTNAME,
         'plex_connected': plex_ok,
         'plex_info': plex_info,
         'verify_enabled': not DISABLE_VERIFY,
@@ -101,12 +101,12 @@ def status():
     <div class="section">
         <label>Plex server</label>
         <p class="{ok_cls if plex_ok else fail_cls}">
-            {"Connected" if plex_ok else "Unreachable"} - {PLEX_HOST}
+            {"Connected" if plex_ok else "Unreachable"} - {PLEX_URL}
         </p>
     </div>
     <div class="section">
         <label>Public stream host</label>
-        <p>{PLEX_PUBLIC_HOST or "(not set)"}</p>
+        <p>{PLEX_PUBLIC_HOSTNAME or "(not set)"}</p>
     </div>
     <div class="section">
         <label>Request verification</label>

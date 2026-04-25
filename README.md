@@ -165,8 +165,8 @@ Edit `docker-compose.yml` and replace all `YOUR_*` placeholders:
 ```yaml
 environment:
   - SKILL_HOSTNAME=plex.YOUR_DOMAIN      # e.g. plex.example.com (Alexa only allow https port 443)
-  - PLEX_HOST=http://YOUR_PLEX_IP:32400  # e.g. your local URL where Plex is at: http://192.168.1.100:32400
-  - PLEX_PUBLIC_HOST=plex.YOUR_DOMAIN    # e.g. plex.example.com (suggest this be the same as the SKILL_HOSTNAME)
+  - PLEX_URL=http://YOUR_PLEX_IP:32400  # e.g. your local URL where Plex is at: http://192.168.1.100:32400
+  - PLEX_PUBLIC_HOSTNAME=plex.YOUR_DOMAIN    # e.g. plex.example.com (suggest this be the same as the SKILL_HOSTNAME)
 ```
 
 ### 3. Set up your reverse proxy
@@ -301,9 +301,9 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `SKILL_HOSTNAME` | Yes | Public hostname for the skill endpoint (e.g. `plex.example.com`) |
-| `PLEX_HOST` | Yes | Internal Plex server URL (e.g. `http://192.168.1.100:32400`) |
+| `PLEX_URL` | Yes | Internal Plex server URL (e.g. `http://192.168.1.100:32400`) |
 | `PLEX_TOKEN` | Yes | Plex authentication token (or path to Docker secret file) |
-| `PLEX_PUBLIC_HOST` | Yes | Public hostname for Plex streaming — FQDN only, no scheme (e.g. `plex.example.com`) |
+| `PLEX_PUBLIC_HOSTNAME` | Yes | Public hostname for Plex streaming — FQDN only, no scheme (e.g. `plex.example.com`) |
 | `PORT` | No | Port for Flask to listen on (default: `5001`) |
 | `TZ` | No | Container timezone (default: `UTC`) |
 | `DISABLE_REQUEST_VERIFY` | No | Set to `true` to skip Alexa signature verification (testing only) |

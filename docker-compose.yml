@@ -4,17 +4,17 @@ services:
     # build: ./app #if not using the image above and self compiling
     container_name: plex-alexa-skill
     environment:
-      # Your public HTTPS hostname for the Alexa skill endpoint
+      # Your public HTTPS hostname for the Alexa skill endpoint (Alexa requires https 443))
       - SKILL_HOSTNAME=plex.YOUR_DOMAIN
 
       # Plex server internal LAN address
-      - PLEX_HOST=http://YOUR_PLEX_IP:32400
+      - PLEX_URL=http://YOUR_PLEX_IP:32400
 
       # Plex token (read from Docker secret file)
       - PLEX_TOKEN=/run/secrets/PLEX_TOKEN
 
-      # Public hostname Alexa uses to stream audio (FQDN only, no https://)
-      - PLEX_PUBLIC_HOST=plex.YOUR_DOMAIN
+      # Public hostname Alexa uses to stream audio (FQDN only Alexa requires https 443)
+      - PLEX_PUBLIC_HOSTNAME=plex.YOUR_DOMAIN
 
       - PORT=5001
       - TZ=America/Chicago
