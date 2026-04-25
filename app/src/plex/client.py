@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 PLEX_URL = os.environ.get('PLEX_URL', 'http://YOUR_PLEX_IP:32400')
 # Accept either bare FQDN or https://FQDN — normalize to bare FQDN at load time.
 # https:// is always prepended when building public URLs.
-_raw_public_hostname = os.environ.get('PLEX_PUBLIC_HOSTNAMENAME', '')
-PLEX_PUBLIC_HOSTNAMENAME = _raw_public_hostname.removeprefix('https://').removeprefix('http://').rstrip('/')
+_raw_public_hostname = os.environ.get('PLEX_PUBLIC_HOSTNAME', '')
+PLEX_PUBLIC_HOSTNAME = _raw_public_hostname.removeprefix('https://').removeprefix('http://').rstrip('/')
 
 def _read_secret(env_var, default=''):
     """Read env var value — if it looks like a file path, read the file contents instead."""
