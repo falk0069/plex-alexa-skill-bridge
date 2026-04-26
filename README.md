@@ -12,6 +12,10 @@ A self-hosted Alexa skill that replaces the discontinued official Plex Alexa ski
 - 📋 **Play playlists** — "Alexa, ask Plex to play the playlist Road Trip"
 - 🔀 **Shuffle artists** — "Alexa, ask Plex to shuffle Fleetwood Mac"
 - 📅 **Play by decade** — "Alexa, ask Plex to play music from the 1990s"
+- 🎸 **Play by genre** — "Alexa, ask Plex to play some Rock"
+- 🕐 **Recently played** — "Alexa, ask Plex to play music" starts your recently played, shuffled
+- ⭐ **Most played** — "Alexa, ask Plex to play my most played music"
+- ✨ **Recently added** — "Alexa, ask Plex to play recently added music"
 - ⏭️ **Queue controls** — next, pause, resume all work naturally
 - 🖼️ **Echo Show support** — album art and track metadata displayed
 - 👨‍👩‍👧 **Multi-device** — each Echo device maintains its own independent queue
@@ -245,6 +249,13 @@ Watch the logs: `docker logs plex-alexa-skill -f`
 | `ask Plex to shuffle Bon Jovi` | Shuffles all Bon Jovi songs |
 | `ask Plex to play music from the 1980s` | Shuffles 80s music |
 | `ask Plex to play music from the nineties` | Shuffles 90s music |
+| `ask Plex to play some Rock` | Shuffles up to 100 Rock tracks |
+| `ask Plex to play Jazz music` | Shuffles up to 100 Jazz tracks |
+| `ask Plex to play music` | Shuffles your 100 most recently played tracks (falls back to random if no history) |
+| `ask Plex to play recently played music` | Same as above |
+| `ask Plex to play my most played music` | Shuffles your 100 most-played tracks |
+| `ask Plex to play recently added music` | Plays newest tracks (30-day window, falls back to 1 year) |
+| `ask Plex to play what's new` | Same as recently added |
 | `Alexa, next` | Skips to next track |
 | `Alexa, pause` | Pauses playback |
 | `Alexa, resume` | Resumes playback |

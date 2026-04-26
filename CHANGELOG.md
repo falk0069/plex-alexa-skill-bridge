@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-04-26
+
+### New Discovery Commands
+
+Added four new voice commands using Plex API sort and filter parameters:
+
+- **Play recently played** (`PlayRecentlyPlayedIntent`) — queries `lastViewedAt:desc` for the top 100 played tracks and shuffles them. Falls back to a random 100-track sample from the full library if no play history exists. "Ask Plex to play music" with no qualifier routes here.
+- **Play most played** (`PlayMostPlayedIntent`) — queries `viewCount:desc` for the top 100 tracks and shuffles them.
+- **Play by genre** (`PlayGenreIntent`) — looks up the exact genre title from Plex's genre list (case-insensitive, partial match), then fetches and shuffles up to 100 tracks. "Ask Plex to play some Rock."
+- **Play recently added** (`PlayRecentlyAddedIntent`) — fetches the 100 most recently added tracks sorted by `addedAt:desc`, filters to past 30 days; if empty, expands to past year; if still empty, responds that nothing new was found.
+
+Also added `GENRE_TYPE` custom slot type to the Alexa interaction model with 22 common genres and synonyms.
+
+---
+
 ## Development History
 
 This project was built collaboratively with Claude AI (Anthropic) as a replacement

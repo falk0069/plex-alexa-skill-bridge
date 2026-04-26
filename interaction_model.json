@@ -97,10 +97,92 @@
           "name": "AMAZON.HelpIntent"
         },
         {
+          "name": "PlayRecentlyPlayedIntent",
+          "slots": [],
+          "samples": [
+            "play music",
+            "play something",
+            "play recently played",
+            "play recently played music",
+            "play my recently played music",
+            "shuffle recently played",
+            "play what I've been listening to",
+            "play my music"
+          ]
+        },
+        {
+          "name": "PlayMostPlayedIntent",
+          "slots": [],
+          "samples": [
+            "play my most played music",
+            "play my most played songs",
+            "play my most played",
+            "play my favorites",
+            "play my top tracks",
+            "play my top songs",
+            "shuffle my most played"
+          ]
+        },
+        {
+          "name": "PlayGenreIntent",
+          "slots": [
+            {
+              "name": "genre",
+              "type": "GENRE_TYPE"
+            }
+          ],
+          "samples": [
+            "play the genre {genre}",
+            "play {genre} music",
+            "play some {genre}",
+            "shuffle {genre}",
+            "shuffle {genre} music",
+            "play {genre} songs"
+          ]
+        },
+        {
+          "name": "PlayRecentlyAddedIntent",
+          "slots": [],
+          "samples": [
+            "play recently added music",
+            "play recently added",
+            "play new music",
+            "play what's new",
+            "play newly added music",
+            "what's new"
+          ]
+        },
+        {
           "name": "AMAZON.FallbackIntent"
         }
       ],
       "types": [
+        {
+          "name": "GENRE_TYPE",
+          "values": [
+            {"name": {"value": "Rock", "synonyms": ["classic rock", "hard rock", "soft rock"]}},
+            {"name": {"value": "Pop", "synonyms": ["pop music", "top 40"]}},
+            {"name": {"value": "Hip Hop", "synonyms": ["hip-hop", "rap", "hip hop music"]}},
+            {"name": {"value": "Jazz", "synonyms": ["jazz music"]}},
+            {"name": {"value": "Classical", "synonyms": ["classical music", "orchestral"]}},
+            {"name": {"value": "Country", "synonyms": ["country music"]}},
+            {"name": {"value": "Electronic", "synonyms": ["electronic music", "EDM", "techno"]}},
+            {"name": {"value": "R&B", "synonyms": ["R and B", "rhythm and blues", "soul"]}},
+            {"name": {"value": "Metal", "synonyms": ["heavy metal", "metal music"]}},
+            {"name": {"value": "Folk", "synonyms": ["folk music", "acoustic"]}},
+            {"name": {"value": "Blues", "synonyms": ["blues music"]}},
+            {"name": {"value": "Reggae", "synonyms": ["reggae music"]}},
+            {"name": {"value": "Punk", "synonyms": ["punk rock", "punk music"]}},
+            {"name": {"value": "Funk", "synonyms": ["funk music"]}},
+            {"name": {"value": "Latin", "synonyms": ["latin music"]}},
+            {"name": {"value": "Indie", "synonyms": ["indie music", "indie rock", "indie pop"]}},
+            {"name": {"value": "Alternative", "synonyms": ["alternative rock", "alt rock"]}},
+            {"name": {"value": "Dance", "synonyms": ["dance music"]}},
+            {"name": {"value": "Disco", "synonyms": ["disco music"]}},
+            {"name": {"value": "Gospel", "synonyms": ["gospel music"]}},
+            {"name": {"value": "Soundtrack", "synonyms": ["movie soundtrack", "film score"]}}
+          ]
+        },
         {
           "name": "DECADE_TYPE",
           "values": [

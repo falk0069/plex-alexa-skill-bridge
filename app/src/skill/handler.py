@@ -168,12 +168,16 @@ class PlayMusicIntentHandler(AbstractRequestHandler):
             query = playlist_slot.value
 
         if not query_type or not query:
-            return (
-                handler_input.response_builder
-                .speak("I didn't catch what you wanted to play. Try saying: play the artist Taylor Swift.")
-                .ask("What would you like to play?")
-                .response
-            )
+            # No slot filled — treat as "play music" → recently played (falls back to random)
+            tracks, description = resolve_play_request('recently_played', '')
+            if not tracks:
+                return (
+                    handler_input.response_builder
+                    .speak(description)
+                    .ask("What would you like to play?")
+                    .response
+                )
+            return _speak_and_play(handler_input, tracks, description)
 
         tracks, description = resolve_play_request(query_type, query)
 
@@ -254,6 +258,89 @@ class PlayDecadeIntentHandler(AbstractRequestHandler):
             )
 
         return _speak_and_play(handler_input, tracks, description)
+
+class PlayRecentlyPlayedIntentHandler(AbstractRequestHandler):
+    """Handles: play music / play recently played music"""
+
+    def can_handle(self, handler_input):
+        return is_intent_name("PlayRecentlyPlayedIntent")(handler_input)
+
+    def handle(self, handler_input):
+        tracks, description = resolve_play_request('recently_played', '')
+        if not tracks:
+            return (
+                handler_input.response_builder
+                .speak(description)
+                .ask("What would you like to play?")
+                .response
+            )
+        return _speak_and_play(handler_input, tracks, description)
+
+
+class PlayMostPlayedIntentHandler(AbstractRequestHandler):
+    """Handles: play my most played music"""
+
+    def can_handle(self, handler_input):
+        return is_intent_name("PlayMostPlayedIntent")(handler_input)
+
+    def handle(self, handler_input):
+        tracks, description = resolve_play_request('most_played', '')
+        if not tracks:
+            return (
+                handler_input.response_builder
+                .speak(description)
+                .ask("What would you like to play?")
+                .response
+            )
+        return _speak_and_play(handler_input, tracks, description)
+
+
+class PlayGenreIntentHandler(AbstractRequestHandler):
+    """Handles: play the genre [genre]"""
+
+    def can_handle(self, handler_input):
+        return is_intent_name("PlayGenreIntent")(handler_input)
+
+    def handle(self, handler_input):
+        slots = handler_input.request_envelope.request.intent.slots or {}
+        genre_slot = slots.get('genre')
+        query = genre_slot.value if genre_slot else None
+
+        if not query:
+            return (
+                handler_input.response_builder
+                .speak("Which genre would you like to hear?")
+                .ask("Which genre?")
+                .response
+            )
+
+        tracks, description = resolve_play_request('genre', query)
+        if not tracks:
+            return (
+                handler_input.response_builder
+                .speak(description + ". Please try again.")
+                .ask("What would you like to play?")
+                .response
+            )
+        return _speak_and_play(handler_input, tracks, description)
+
+
+class PlayRecentlyAddedIntentHandler(AbstractRequestHandler):
+    """Handles: play recently added music"""
+
+    def can_handle(self, handler_input):
+        return is_intent_name("PlayRecentlyAddedIntent")(handler_input)
+
+    def handle(self, handler_input):
+        tracks, description = resolve_play_request('recently_added', '')
+        if not tracks:
+            return (
+                handler_input.response_builder
+                .speak(description)
+                .response
+            )
+        return _speak_and_play(handler_input, tracks, description)
+
 
 # ── AudioPlayer Event Handlers ─────────────────────────────────────────────────
 
@@ -492,6 +579,10 @@ sb.add_request_handler(LaunchRequestHandler())
 sb.add_request_handler(PlayMusicIntentHandler())
 sb.add_request_handler(ShuffleArtistIntentHandler())
 sb.add_request_handler(PlayDecadeIntentHandler())
+sb.add_request_handler(PlayRecentlyPlayedIntentHandler())
+sb.add_request_handler(PlayMostPlayedIntentHandler())
+sb.add_request_handler(PlayGenreIntentHandler())
+sb.add_request_handler(PlayRecentlyAddedIntentHandler())
 sb.add_request_handler(PlaybackNearlyFinishedHandler())
 sb.add_request_handler(PlaybackFinishedHandler())
 sb.add_request_handler(PlaybackStartedHandler())

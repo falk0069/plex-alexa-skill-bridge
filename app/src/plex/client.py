@@ -323,6 +323,121 @@ def _get_music_section_key():
             return section.get('key')
     return None
 
+
+def get_recently_played_tracks(limit=100):
+    """Get recently played tracks sorted by lastViewedAt, shuffled. Falls back to random if none played."""
+    section_key = _get_music_section_key()
+    if not section_key:
+        return []
+    data = _get(f'/library/sections/{section_key}/all', type=10, sort='lastViewedAt:desc', limit=limit)
+    if not data:
+        return []
+    tracks = data.get('MediaContainer', {}).get('Metadata', []) or []
+    played = [t for t in tracks if t.get('lastViewedAt')]
+    random.shuffle(played)
+    logger.info(f"get_recently_played_tracks: {len(played)} played tracks")
+    return played
+
+
+def get_most_played_tracks(limit=100):
+    """Get most played tracks sorted by viewCount, shuffled."""
+    section_key = _get_music_section_key()
+    if not section_key:
+        return []
+    data = _get(f'/library/sections/{section_key}/all', type=10, sort='viewCount:desc', limit=limit)
+    if not data:
+        return []
+    tracks = data.get('MediaContainer', {}).get('Metadata', []) or []
+    played = [t for t in tracks if (t.get('viewCount') or 0) > 0]
+    random.shuffle(played)
+    logger.info(f"get_most_played_tracks: {len(played)} tracks")
+    return played
+
+
+def get_random_library_tracks(limit=100):
+    """Get a random sample of tracks from the full library."""
+    section_key = _get_music_section_key()
+    if not section_key:
+        return []
+    data = _get(f'/library/sections/{section_key}/all', type=10, limit=500)
+    if not data:
+        return []
+    tracks = data.get('MediaContainer', {}).get('Metadata', []) or []
+    if len(tracks) > limit:
+        tracks = random.sample(tracks, limit)
+    else:
+        random.shuffle(tracks)
+    logger.info(f"get_random_library_tracks: returning {len(tracks)} tracks")
+    return tracks
+
+
+def _match_genre(section_key, genre_query):
+    """Find the exact genre title from Plex that best matches the query string."""
+    data = _get(f'/library/sections/{section_key}/genre')
+    if not data:
+        return None
+    directories = data.get('MediaContainer', {}).get('Directory', []) or []
+    query_lower = genre_query.lower()
+    for d in directories:
+        if d.get('title', '').lower() == query_lower:
+            return d.get('title')
+    for d in directories:
+        if query_lower in d.get('title', '').lower():
+            return d.get('title')
+    return None
+
+
+def get_tracks_by_genre(genre, limit=100):
+    """Get tracks matching a genre, shuffled. Returns (tracks, matched_genre_title)."""
+    section_key = _get_music_section_key()
+    if not section_key:
+        return [], None
+    matched = _match_genre(section_key, genre)
+    if not matched:
+        logger.warning(f"get_tracks_by_genre: no genre found matching {genre!r}")
+        return [], None
+    data = _get(f'/library/sections/{section_key}/all', type=10, genre=matched, limit=limit)
+    if not data:
+        return [], matched
+    tracks = data.get('MediaContainer', {}).get('Metadata', []) or []
+    random.shuffle(tracks)
+    logger.info(f"get_tracks_by_genre: genre={matched!r} found {len(tracks)} tracks")
+    return tracks, matched
+
+
+def get_recently_added_tracks(limit=100):
+    """Get recently added tracks sorted newest-first.
+
+    Returns (tracks, period) where period is '30_days', '1_year', or 'nothing'.
+    Fetches the top limit tracks by addedAt and filters by date window in Python.
+    """
+    import time
+    section_key = _get_music_section_key()
+    if not section_key:
+        return [], 'no_section'
+    data = _get(f'/library/sections/{section_key}/all', type=10, sort='addedAt:desc', limit=limit)
+    if not data:
+        return [], 'nothing'
+    tracks = data.get('MediaContainer', {}).get('Metadata', []) or []
+
+    now = int(time.time())
+    thirty_days_ago = now - (30 * 24 * 3600)
+    one_year_ago = now - (365 * 24 * 3600)
+
+    recent = [t for t in tracks if (t.get('addedAt') or 0) >= thirty_days_ago]
+    if recent:
+        logger.info(f"get_recently_added_tracks: {len(recent)} tracks in past 30 days")
+        return recent, '30_days'
+
+    past_year = [t for t in tracks if (t.get('addedAt') or 0) >= one_year_ago]
+    if past_year:
+        logger.info(f"get_recently_added_tracks: {len(past_year)} tracks in past year")
+        return past_year, '1_year'
+
+    logger.info("get_recently_added_tracks: no tracks found in past year")
+    return [], 'nothing'
+
+
 def resolve_play_request(query_type, query):
     """
     Main entry point: given a type and query string, return a list of track info dicts.
@@ -390,5 +505,43 @@ def resolve_play_request(query_type, query):
             return [], f"I couldn't find any songs from the {query}"
         track_infos = [track_to_info(t) for t in tracks]
         return track_infos, f"Shuffling music from the {query}"
+
+    elif query_type == 'recently_played':
+        tracks = get_recently_played_tracks(limit=100)
+        if not tracks:
+            logger.info("resolve_play_request: no play history, falling back to random library")
+            tracks = get_random_library_tracks(limit=100)
+            if not tracks:
+                return [], "I couldn't find any music in your library"
+            track_infos = [track_to_info(t) for t in tracks]
+            return track_infos, "Shuffling your music library"
+        track_infos = [track_to_info(t) for t in tracks]
+        return track_infos, "Shuffling your recently played music"
+
+    elif query_type == 'most_played':
+        tracks = get_most_played_tracks(limit=100)
+        if not tracks:
+            return [], "I couldn't find any play history in your library"
+        track_infos = [track_to_info(t) for t in tracks]
+        return track_infos, "Shuffling your most played music"
+
+    elif query_type == 'genre':
+        tracks, matched_genre = get_tracks_by_genre(query, limit=100)
+        if not tracks:
+            if matched_genre is None:
+                return [], f"I couldn't find the genre {query} in your library"
+            return [], f"I couldn't find any {matched_genre} tracks"
+        track_infos = [track_to_info(t) for t in tracks]
+        return track_infos, f"Shuffling {matched_genre} music"
+
+    elif query_type == 'recently_added':
+        tracks, period = get_recently_added_tracks(limit=100)
+        if not tracks:
+            if period == 'nothing':
+                return [], "I didn't find any music added in the past year"
+            return [], "I couldn't access your music library"
+        track_infos = [track_to_info(t) for t in tracks]
+        period_label = "the past 30 days" if period == '30_days' else "the past year"
+        return track_infos, f"Playing recently added music from {period_label}"
 
     return [], "I didn't understand what you wanted to play"
