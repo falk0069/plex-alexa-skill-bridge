@@ -315,6 +315,7 @@ Make sure you're using `--workers 1` in the Dockerfile CMD. Multiple workers hav
 - Queue state is in-memory — restarting the container clears all queues
 - Decade search caps at 30 albums to avoid response timeouts
 - Multi-device playback works but requires a single gunicorn worker (`--workers 1`) for shared queue state
+- Playlists are user specific. If you created a unique user for Alexa, be sure to share the playlist with that user.
 
 ## Building from source
 
