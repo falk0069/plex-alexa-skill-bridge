@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-05-10
+
+### Song-by-artist disambiguation
+
+Voice commands like "play the song baby by Justin Bieber" were being routed to the artist slot only, so the skill would shuffle the artist instead of playing the requested song. Alexa's NLU was dropping the song title because no sample utterance combined both slots, and short ambiguous song titles (e.g. "baby") tended to resolve as artists.
+
+- Added five combined-slot samples to `interaction_model.json`: `play the song {song} by {artist}`, `play the track {song} by {artist}`, `play {song} by {artist}`, `I want to hear {song} by {artist}`, `put on {song} by {artist}`. **Requires re-uploading the interaction model in the Alexa Developer Console and rebuilding** for the new samples to take effect.
+- `PlayMusicIntentHandler` now passes the artist value through to track search when both slots are filled.
+- `resolve_play_request` accepts an `artist_filter` argument that narrows song results to tracks whose `grandparentTitle` matches (case-insensitive substring). If no track matches the filter, it falls back to the top result and logs a notice.
+- Added a slot-debug log line that records all four slot values (`song`, `artist`, `album`, `playlist`) on every `PlayMusicIntent` so future NLU mis-routing is visible in the logs.
+
+---
+
 ## 2026-04-26
 
 ### New Discovery Commands

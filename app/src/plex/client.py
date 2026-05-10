@@ -438,19 +438,27 @@ def get_recently_added_tracks(limit=100):
     return [], 'nothing'
 
 
-def resolve_play_request(query_type, query):
+def resolve_play_request(query_type, query, artist_filter=None):
     """
     Main entry point: given a type and query string, return a list of track info dicts.
     query_type: 'song', 'artist', 'album', 'playlist'
+    artist_filter: when query_type is 'song', restrict to tracks whose artist matches.
     Returns (tracks, description) tuple.
     """
     query = query.strip()
-    logger.info(f"Resolving play request: type={query_type}, query={query!r}")
+    logger.info(f"Resolving play request: type={query_type}, query={query!r}, artist_filter={artist_filter!r}")
 
     if query_type == 'song':
         results = search_tracks(query)
         if not results:
             return [], f"I couldn't find a song called {query}"
+        if artist_filter:
+            af = artist_filter.lower().strip()
+            filtered = [r for r in results if af in (r.get('grandparentTitle') or '').lower()]
+            if filtered:
+                results = filtered
+            else:
+                logger.info(f"song search: no track matched artist filter {artist_filter!r}; using top result")
         track_info = track_to_info(results[0])
         return [track_info], f"Playing {track_info['title']} by {track_info['artist']}"
 

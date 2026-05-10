@@ -145,27 +145,38 @@ class PlayMusicIntentHandler(AbstractRequestHandler):
     def handle(self, handler_input):
         slots = handler_input.request_envelope.request.intent.slots or {}
 
-        query_type = None
-        query = None
-
-        # Check each slot
         song_slot = slots.get('song')
         artist_slot = slots.get('artist')
         album_slot = slots.get('album')
         playlist_slot = slots.get('playlist')
 
-        if song_slot and song_slot.value:
+        song_val = song_slot.value if song_slot else None
+        artist_val = artist_slot.value if artist_slot else None
+        album_val = album_slot.value if album_slot else None
+        playlist_val = playlist_slot.value if playlist_slot else None
+        logger.info(
+            f"PlayMusicIntent slots: song={song_val!r} artist={artist_val!r} "
+            f"album={album_val!r} playlist={playlist_val!r}"
+        )
+
+        query_type = None
+        query = None
+        artist_filter = None
+
+        if song_val:
             query_type = 'song'
-            query = song_slot.value
-        elif artist_slot and artist_slot.value:
+            query = song_val
+            if artist_val:
+                artist_filter = artist_val
+        elif artist_val:
             query_type = 'artist'
-            query = artist_slot.value
-        elif album_slot and album_slot.value:
+            query = artist_val
+        elif album_val:
             query_type = 'album'
-            query = album_slot.value
-        elif playlist_slot and playlist_slot.value:
+            query = album_val
+        elif playlist_val:
             query_type = 'playlist'
-            query = playlist_slot.value
+            query = playlist_val
 
         if not query_type or not query:
             # No slot filled — treat as "play music" → recently played (falls back to random)
@@ -179,7 +190,7 @@ class PlayMusicIntentHandler(AbstractRequestHandler):
                 )
             return _speak_and_play(handler_input, tracks, description)
 
-        tracks, description = resolve_play_request(query_type, query)
+        tracks, description = resolve_play_request(query_type, query, artist_filter=artist_filter)
 
         if not tracks:
             return (

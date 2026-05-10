@@ -8,7 +8,7 @@ A self-hosted Alexa skill that replaces the discontinued official Plex Alexa ski
 
 - 🎵 **Play by artist** — "Alexa, ask Plex to play the artist Creed"
 - 💿 **Play by album** — "Alexa, ask Plex to play the album Dirt"
-- 🎶 **Play by song** — "Alexa, ask Plex to play the song Africa"
+- 🎶 **Play by song** — "Alexa, ask Plex to play the song Africa" (or "play the song Baby by Justin Bieber" to disambiguate)
 - 📋 **Play playlists** — "Alexa, ask Plex to play the playlist Road Trip"
 - 🔀 **Shuffle artists** — "Alexa, ask Plex to shuffle Fleetwood Mac"
 - 📅 **Play by decade** — "Alexa, ask Plex to play music from the 1990s"
@@ -245,6 +245,7 @@ Watch the logs: `docker logs plex-alexa-skill -f`
 | `ask Plex to play the artist Taylor Swift` | Shuffles all Taylor Swift songs |
 | `ask Plex to play the album Rumours` | Plays album in order |
 | `ask Plex to play the song Africa` | Plays that song |
+| `ask Plex to play the song Baby by Justin Bieber` | Plays that song, narrowed by artist |
 | `ask Plex to play the playlist Road Trip` | Plays playlist |
 | `ask Plex to shuffle Bon Jovi` | Shuffles all Bon Jovi songs |
 | `ask Plex to play music from the 1980s` | Shuffles 80s music |
